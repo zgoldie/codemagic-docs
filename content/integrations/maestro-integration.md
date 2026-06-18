@@ -4,9 +4,34 @@ description: How to integrate your workflows with Maestro using codemagic.yaml
 weight: 16
 ---
 
-[**Maestro UI testing framework**](https://maestro.dev/) lets you test your iOS and Android mobile apps using simple to-create test flows that are written in a declarative form using YAML. In order to run your tests in CI you can utilize [Maestro Cloud](https://app.maestro.dev/), which allows you to easily run your Flows without having to manage iOS and Android devices in your own CI. For more information on how to get started with Maestro and Maestro Cloud, please refer to the [Maestro documentation](https://docs.maestro.dev/).
+[**Maestro UI testing framework**](https://maestro.dev/) lets you test your iOS and Android mobile apps using simple to-create test flows that are written in a declarative form using YAML. You can run those flows on Codemagic build machines with `maestro test`, or upload your app and flows to [Maestro Cloud](https://app.maestro.dev/) with `maestro cloud` if you prefer not to manage simulators and emulators in CI. For more information on how to get started with Maestro, please refer to the [Maestro documentation](https://docs.maestro.dev/).
 
 A sample project that shows how to configure Maestro integration is available in our [Sample projects repository](https://github.com/codemagic-ci-cd/codemagic-sample-projects/tree/main/integrations/maestro_sample_project).
+
+
+## Run tests on Codemagic build machines
+
+After you build a simulator **`.app`** (iOS) or **`.apk`** (Android), install the Maestro CLI, boot a pre-installed simulator or emulator, install the app on it, and run your flows:
+
+{{< highlight yaml "style=paraiso-dark">}}
+scripts:
+    - name: Install Maestro CLI
+      script: |
+        curl -Ls "https://get.maestro.mobile.dev" | bash
+        export PATH="$PATH:$HOME/.maestro/bin"
+        maestro --version
+    - name: Run Maestro tests
+      script: |
+        export PATH="$PATH:$HOME/.maestro/bin"
+        APP_PATH=$(ls -d build/ios/Build/Products/Debug-iphonesimulator/*.app | head -n 1)
+        SIMULATOR_UDID=$(xcrun simctl list devices available | grep "iPhone" | sed -n 's/.*(\([A-F0-9-]\{36\}\)).*/\1/p' | head -n 1)
+        xcrun simctl boot "$SIMULATOR_UDID" || true
+        xcrun simctl bootstatus booted -b
+        xcrun simctl install booted "$APP_PATH"
+        maestro test .maestro/
+{{< /highlight >}}
+
+iOS Simulators are [pre-installed on macOS build machines](../specs/versions-macos/). For Android emulator tests, use a [Linux build instance](../specs/versions-linux/) — emulators are not available on macOS Apple Silicon machines.
 
 
 ## Get Maestro Cloud API Key
